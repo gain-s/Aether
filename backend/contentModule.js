@@ -1,4 +1,5 @@
-import { generateText } from "../shared/aiService.js";
+import * as aiService from "../shared/aiService.js";
+const { generateText } = aiService;
 
 async function handleContent(prompt) {
   return await generateText(prompt);

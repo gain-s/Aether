@@ -1,0 +1,75 @@
+{
+  "name": "AetherPress Prototype Alpha V0.1",
+
+  // --- SERVICE CONFIGURATION ---
+  // Point to the docker-compose file and specify the service to use
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "app",
+  "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
+
+  // --- LIFECYCLE HOOKS ---
+  // Commands to run after the container is created.
+  "postCreateCommand": "npm install -g concurrently && npm --prefix frontend install && npm --prefix backend install && npx playwright install",
+
+  // Command to run after starting the container.
+  // 'concurrently' runs both dev servers with labeled output.
+  "postStartCommand": "concurrently \"cd ./frontend && npm run dev\" \"cd ./backend && npm run dev\"",
+
+  // --- ENVIRONMENT VARIABLES ---
+  // Forward local/secrets to the container. The compose file picks these up.
+  "remoteEnv": {
+    "SQLITE_URL": "sqlite:///workspaces/${localWorkspaceFolderBasename}/backend/db.sqlite",
+    "POSTGRESQL_URL": "postgresql://${localEnv:POSTGRES_USER}:${localEnv:POSTGRES_PASSWORD}@db:5432/${localEnv:POSTGRES_DB}",
+    "DATABASE_URL": "${localEnv:SQLITE_URL}",
+
+    "GEMINI_API_KEY": "${localEnv:GEMINI_API_KEY}"
+  },
+
+  // --- VS CODE CUSTOMIZATIONS ---
+  "customizations": {
+    "codespaces": {
+      "openFiles": ["backend/index.js", "frontend/src/index.js"]
+    },
+    "vscode": {
+      "extensions": [
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "bradlc.vscode-tailwindcss",
+        "prisma.prisma",
+        "github.copilot",
+        "github.copilot-chat",
+        "gitHub.vscode-github-actions",
+        "ms-azuretools.vscode-postgresql",
+        "ms-azuretools.vscode-docker",
+        "vscode-icons-team.vscode-icons",
+        "dsznajder.es7-react-js-snippets"
+      ],
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "zsh", // or "bash"
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "workbench.iconTheme": "vscode-icons",
+        "github.copilot.enable": {
+          "*": true,
+          "plaintext": false,
+          "markdown": true,
+          "scminput": false
+        }
+      }
+    }
+  },
+
+  // --- PORT FORWARDING ---
+  "forwardPorts": [5173, 3000, 5432],
+  "portsAttributes": {
+    "5173": { "label": "Vite/React FE" },
+    "3000": { "label": "Express/Node.js BE" },
+    "5432": { "label": "PostgreSQL DB" }
+  },
+
+  // --- GENERAL SETTINGS ---
+  "remoteUser": "node",
+  "hostRequirements": {
+    "cpus": 4
+  }
+}
