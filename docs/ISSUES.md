@@ -1,5 +1,7 @@
 # Implementation Issues & Task Breakdown: Database Setup
 
+> **Note:** The tasks and priorities in this document are subject to the process outlined in `docs/TUNE-SETTINGS.md`. All tune settings and checklist items in that document take precedence over any other implementation or infrastructure work described here. Please ensure the tune settings are completed and verified before proceeding with further database or feature development.
+
 ## Purpose
 
 This section provides a detailed breakdown of the implementation tasks for Database Setup, as outlined in the Core Infrastructure section of the MVP Checklist and NEXT_STEPS.
