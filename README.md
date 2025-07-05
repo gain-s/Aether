@@ -15,7 +15,7 @@ For details, see [CONTRIBUTING.md](CONTRIBUTING.md).
 - `/backend` — All backend code (Express server, modules, templates)
 - `/frontend` — React frontend
 - `/data` — SQLite database
-- `/samples` — Sample files (e.g., PNGS, PDFs)
+- `/samples` — Sample files (e.g., PNGs, PDFs)
 
 ## Features
 
