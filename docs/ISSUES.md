@@ -20,7 +20,7 @@ Establish a robust and maintainable database layer that supports all required ba
 
    - [x] Choose and configure the database system (e.g., SQLite, PostgreSQL, MySQL). _(SQLite in use)_
    - [x] Ensure the database file or server is created and accessible. _(data/aetherpress.db is created if missing)_
-   - [ ] Add database connection logic to the backend (using environment variables for credentials/paths). _(Currently hardcoded path; could be improved)_
+   - [x] Add database connection logic to the backend (using environment variables for credentials/paths). _(Supports env var AETHERPRESS_DB_PATH; falls back to default)_
 
 2. **Schema Definition & Migration**
 
@@ -55,7 +55,7 @@ Establish a robust and maintainable database layer that supports all required ba
 ### Notes on Current State
 
 - SQLite is in use, with schema and CRUD logic implemented.
-- Database path is hardcoded; environment variable support is a possible improvement.
+- Database path is now configurable via environment variable (AETHERPRESS_DB_PATH).
 - No migration or seeding scripts yet; tables are auto-created on startup.
 - Validation and constraints exist but can be expanded.
 - Testing and verification are ongoing.

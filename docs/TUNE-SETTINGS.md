@@ -14,9 +14,9 @@ This checklist will help you safely remove `package.json` and related files from
   - [x] Ensure no one is expected to run `npm run ...` or `npm install` from the root for project setup, linting, or testing.
   - [x] Move any shared scripts or configs to a `scripts/` or `config/` folder, and update documentation accordingly.
 
-- [ ] **Update documentation**
+- [x] **Update documentation**
 
-  - [ ] Make sure your README and onboarding docs do not reference root-level npm commands.
+  - [x] Make sure your README and onboarding docs do not reference root-level npm commands.
 
 - [ ] **Test the devcontainer**
   - [ ] Rebuild the devcontainer after removing the root `package.json` and `package-lock.json`.

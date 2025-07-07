@@ -27,7 +27,7 @@ const db = new sqlite3.Database(dbPath, (err) => {
         if (err) {
           console.error("Error creating table:", err.message);
         }
-      },
+      }
     );
 
     // Create documents table
@@ -46,7 +46,7 @@ const db = new sqlite3.Database(dbPath, (err) => {
         } else {
           console.log("Documents table ready");
         }
-      },
+      }
     );
   }
 });
@@ -138,11 +138,38 @@ function getDocument(id) {
 
 function updateDocument(id, title, content) {
   return new Promise((resolve, reject) => {
+    // Validation: Ensure id is a positive integer, title/content are non-empty strings
+    if (!id || isNaN(Number(id)) || Number(id) <= 0) {
+      return reject(new Error("A valid document id is required"));
+    }
+    if (typeof title !== "string" || !title.trim()) {
+      return reject(
+        new Error("Title is required and must be a non-empty string")
+      );
+    }
+    if (typeof content !== "string" || !content.trim()) {
+      return reject(
+        new Error("Content is required and must be a non-empty string")
+      );
+    }
+    // Optionally, add length/format checks here
     const query = `UPDATE documents SET title = ?, content = ?, 
                   updated_at = CURRENT_TIMESTAMP WHERE id = ?`;
-    db.run(query, [title, content, id], (err) => {
-      if (err) reject(err);
-      else resolve({ id, title, content });
+    db.run(query, [title, content, id], function (err) {
+      if (err) {
+        // Handle unique constraint violation for title
+        if (
+          err.message &&
+          err.message.includes("UNIQUE constraint failed: documents.title")
+        ) {
+          return reject(new Error("A document with this title already exists"));
+        }
+        return reject(err);
+      }
+      if (this.changes === 0) {
+        return reject(new Error("No document found with the given id"));
+      }
+      resolve({ id, title, content });
     });
   });
 }

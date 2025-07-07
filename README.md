@@ -33,20 +33,20 @@ For details, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ### Backend
 
-1. From the project root, start the backend server:
+1. Navigate to the backend directory:
    ```bash
-   npm start
+   cd backend
+   npm install
+   npm run dev
    ```
    (This runs the Express server from `/backend/index.js`.)
 
 ### Frontend
 
-1. Navigate to the `frontend` directory:
+1. Navigate to the frontend directory:
    ```bash
-   cd /workspaces/codespaces-express/frontend
-   ```
-2. Start the React development server:
-   ```bash
+   cd frontend
+   npm install
    npm start
    ```
 

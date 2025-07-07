@@ -1,36 +1,6 @@
 # .devcontainer/Dockerfile (v02 - mon 7th jul 2025)
 FROM mcr.microsoft.com/devcontainers/javascript-node:18-bullseye
 
-# Install global dependencies (like concurrently) once
-RUN npm install -g concurrently
-
-# Set the working directory inside the container
-# WORKDIR /workspaces/app
-WORKDIR /workspaces/${localWorkspaceFolderBasename}
-
-# --- Backend Dependencies ---
-# Copy only package files first to leverage caching
-COPY backend/package*.json ./backend/
-# Install dependencies
-RUN npm --prefix backend install
-
-# --- Frontend Dependencies ---
-COPY frontend/package*.json ./frontend/
-RUN npm --prefix frontend install
-
-# --- Playwright ---
-# Install playwright browsers. This is slow, so caching it is a huge win.
-COPY backend/package*.json ./backend/
-# or wherever playwright is a dependency
-RUN npx playwright install --with-deps
-
-# Now copy the rest of the source code
-# This ensures that code changes don't invalidate the npm install cache layer
-COPY . .
-
-# Ensure the 'node' user (used by the dev container) owns the files
-RUN chown -R node:node /workspaces/${localWorkspaceFolderBasename}
-
 # Install OS dependencies needed for Puppeteer and other tools
 # This RUN command will be cached, making rebuilds much faster
 RUN sudo apt-get update && sudo apt-get install -y --no-install-recommends \
@@ -45,3 +15,31 @@ RUN sudo apt-get update && sudo apt-get install -y --no-install-recommends \
     zsh \
     build-essential python3 make gcc g++ sqlite3 libsqlite3-dev \
     && sudo apt-get clean && sudo rm -rf /var/lib/apt/lists/*
+
+# Install global Node.js dependencies (like concurrently) once
+RUN npm install -g concurrently
+
+# Set the working directory inside the container
+# This ARG is typically supplied by the VS Code dev container build process.
+WORKDIR /workspaces/${localWorkspaceFolderBasename}
+
+# --- Backend Dependencies & Playwright ---
+# Copy package files first to leverage Docker cache.
+COPY backend/package*.json ./backend/
+# Install npm packages for the backend.
+RUN npm --prefix backend install
+# Install Playwright browsers right after its dependency is installed.
+# This ensures this slow step is cached as long as package.json doesn't change.
+RUN npx --prefix backend playwright install --with-deps
+
+# --- Frontend Dependencies ---
+COPY frontend/package*.json ./frontend/
+RUN npm --prefix frontend install
+
+# Now copy the rest of the source code
+# This ensures that code changes don't invalidate the npm install cache layer
+COPY . .
+
+# Ensure the 'node' user owns all files after they've been copied.
+# This is a common requirement for dev containers to avoid permission issues.
+RUN sudo chown -R node:node /workspaces/${localWorkspaceFolderBasename}
