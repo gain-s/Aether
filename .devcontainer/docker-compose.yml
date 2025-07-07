@@ -1,11 +1,14 @@
 # .devcontainer/docker-compose.yml
 
+# This file defines your application container (app) and your PostgreSQL database container (db). 
+# Docker Compose handles networking, so your app can reach the database at the hostname db.
+
 services:
   # Your application development container
   app:
     build:
-      context: .
-      dockerfile: Dockerfile
+      context: .. # The 'build' context points to the parent directory where .devcontainer is located
+      dockerfile: .devcontainer/Dockerfile
     
     # Mount your project directory into the container
     volumes:

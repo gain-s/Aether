@@ -1,5 +1,5 @@
 {
-  "name": "AetherPress v0.1 (prototype Alpha)",
+  "name": "AetherPress v0.1 (Alpha)",
 
   // --- SERVICE CONFIGURATION ---
   // Point to the docker-compose file and specify the service to use
@@ -9,9 +9,11 @@
 
   // --- LIFECYCLE HOOKS ---
   // Commands to run after the container is created.
-  "postCreateCommand": "npm install -g concurrently && npm --prefix frontend install && npm --prefix backend install",
+  // All installations are now handled in the Dockerfile for caching!
 
-  // Command to run after starting the container.
+  // You might still need this for things like database migrations.
+  // "postCreateCommand": "npx --prefix backend prisma migrate dev --name init" // Example: Run Prisma migrate
+
   // 'concurrently' runs both dev servers with labeled output.
   "postStartCommand": "concurrently \"npm --prefix frontend run dev\" \"npm --prefix backend run dev\"",
 
@@ -31,23 +33,18 @@
       "extensions": [
         "dbaeumer.vscode-eslint",
         "esbenp.prettier-vscode",
-        "humao.rest-client",
+        "bradlc.vscode-tailwindcss",
         "prisma.prisma",
         "github.copilot",
         "github.copilot-chat",
         "gitHub.vscode-github-actions",
-        "ms-vscode.vscode-typescript-next",
-        "ms-vscode.vscode-node-azure-pack",
         "ms-azuretools.vscode-postgresql",
         "ms-azuretools.vscode-docker",
         "vscode-icons-team.vscode-icons",
-        "cweijan.vscode-postgresql-client2",
-        "bradlc.vscode-tailwindcss",
-        "formulahendry.auto-rename-tag",
         "dsznajder.es7-react-js-snippets"
       ],
       "settings": {
-        "terminal.integrated.defaultProfile.linux": "zsh",
+        "terminal.integrated.defaultProfile.linux": "zsh", // or "bash"
         "editor.formatOnSave": true,
         "editor.defaultFormatter": "esbenp.prettier-vscode",
         "[javascript]": {
@@ -70,9 +67,12 @@
   // --- PORT FORWARDING ---
   "forwardPorts": [5173, 3000, 5432],
   "portsAttributes": {
-    "5173": { "label": "Vite/React FE" },
-    "3000": { "label": "Express/Node.js BE" },
-    "5432": { "label": "PostgreSQL DB" }
+    "5173": {
+      "label": "frontend (Vite/React)",
+      "onAutoForward": "openPreview"
+    },
+    "3000": { "label": "backend (Express/Node.js)" },
+    "5432": { "label": "database (PostgreSQL)" }
   },
 
   // --- GENERAL SETTINGS ---

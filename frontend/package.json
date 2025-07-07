@@ -2,6 +2,14 @@
   "name": "frontend",
   "version": "0.1.0",
   "private": true,
+  "scripts": {
+    "check-port:frontend": "node ../scripts/check-port.cjs 5173",
+    "start": "PORT=5173 DANGEROUSLY_DISABLE_HOST_CHECK=true WDS_SOCKET_PORT=0 react-scripts start",
+    "dev": "PORT=5173 DANGEROUSLY_DISABLE_HOST_CHECK=true WDS_SOCKET_PORT=0 react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject"
+  },
   "dependencies": {
     "@testing-library/dom": "^10.4.0",
     "@testing-library/jest-dom": "^6.6.3",
@@ -11,13 +19,6 @@
     "react-dom": "^19.1.0",
     "react-scripts": "5.0.1",
     "web-vitals": "^2.1.4"
-  },
-  "scripts": {
-    "start": "PORT=5173 DANGEROUSLY_DISABLE_HOST_CHECK=true WDS_SOCKET_PORT=0 react-scripts start",
-    "dev": "PORT=5173 DANGEROUSLY_DISABLE_HOST_CHECK=true WDS_SOCKET_PORT=0 react-scripts start",
-    "build": "react-scripts build",
-    "test": "react-scripts test",
-    "eject": "react-scripts eject"
   },
   "eslintConfig": {
     "extends": [

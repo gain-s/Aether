@@ -1,16 +1,14 @@
 {
-  "name": "aether-original",
+  "name": "aether-backend",
   "version": "1.0.0",
   "type": "module",
+  "main": "index.js",
   "scripts": {
-    "check-port:backend": "node scripts/check-port.cjs 3000",
-    "check-port:frontend": "node scripts/check-port.cjs 5173",
-    "start": "npm run check-port:backend && nodemon backend/index.js",
-    "frontend": "npm run check-port:frontend && cd frontend && npm start",
-    "dev": "concurrently \"npm run frontend\" \"npm start\"",
-    "lint": "eslint . --config config/.eslintrc.json",
-    "lint:fix": "eslint . --config config/.eslintrc.json --fix",
-    "format": "prettier --write . --config config/.prettierrc",
+    "check-port:backend": "node ../scripts/check-port.cjs 3000",
+    "start": "nodemon index.js",
+    "dev": "nodemon index.js",
+    "lint": "eslint . --config ../config/.eslintrc.json",
+    "lint:fix": "eslint . --config ../config/.eslintrc.json --fix",
     "test": "jest"
   },
   "dependencies": {

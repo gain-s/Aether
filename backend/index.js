@@ -38,7 +38,7 @@ app.use((req, res, next) => {
   res.header("Access-Control-Allow-Origin", "*");
   res.header(
     "Access-Control-Allow-Headers",
-    "Origin, X-Requested-With, Content-Type, Accept",
+    "Origin, X-Requested-With, Content-Type, Accept"
   );
   next();
 });
@@ -52,7 +52,7 @@ app.get("/manifest.json", (req, res) => {
   res.header("Access-Control-Allow-Methods", "GET");
   res.header(
     "Access-Control-Allow-Headers",
-    "Origin, X-Requested-With, Content-Type, Accept",
+    "Origin, X-Requested-With, Content-Type, Accept"
   );
   res.sendFile(path.join(__dirname, "frontend", "public", "manifest.json"));
 });
@@ -256,6 +256,6 @@ app.get("/documents", async (req, res) => {
 });
 
 // Start server
-app.listen(port, () => {
+app.listen(port, "0.0.0.0", () => {
   console.log(`AetherPress prototype listening on port ${port}`);
 });

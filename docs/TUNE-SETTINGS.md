@@ -4,15 +4,15 @@ This checklist will help you safely remove `package.json` and related files from
 
 ## To-Do Checklist
 
-- [ ] **Audit devcontainer.json and scripts**
+- [x] **Audit devcontainer.json and scripts**
 
-  - [ ] Check if any commands in `devcontainer.json` (e.g., `postCreateCommand`, `postStartCommand`, etc.) run `npm install`, `npm run`, or similar commands in the root directory.
-  - [ ] If so, update these commands to run in `frontend/` and `backend/` only.
+  - [x] Check if any commands in `devcontainer.json` (e.g., `postCreateCommand`, `postStartCommand`, etc.) run `npm install`, `npm run`, or similar commands in the root directory.
+  - [x] If so, update these commands to run in `frontend/` and `backend/` only.
 
-- [ ] **Check for root-level npm scripts usage**
+- [x] **Check for root-level npm scripts usage**
 
-  - [ ] Ensure no one is expected to run `npm run ...` or `npm install` from the root for project setup, linting, or testing.
-  - [ ] Move any shared scripts or configs to a `scripts/` or `config/` folder, and update documentation accordingly.
+  - [x] Ensure no one is expected to run `npm run ...` or `npm install` from the root for project setup, linting, or testing.
+  - [x] Move any shared scripts or configs to a `scripts/` or `config/` folder, and update documentation accordingly.
 
 - [ ] **Update documentation**
 
