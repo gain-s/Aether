@@ -51,8 +51,9 @@ To empower creators (writers, poets, educators, marketers) to effortlessly desig
 - **Client:** Modern, component-based JS framework (Vite/Svelte). Focus on a clean, responsive UI.
 - **Server:** Scalable platform (Express/Node.js). Ready to orchestrate multiple API calls.
 - **Database:** For a balance of structure and flexibility (PostgreSQL/JSONB).
-  - Production deployments can use any PostgreSQL-compatible service (Azure Database, AWS RDS, etc.) 
-  - No longer is it SQLite with planned migration to PostgreSQL/JSONB.
+  - Production deployments can use any PostgreSQL-compatible service (Azure Database, AWS RDS, etc.)
+  - Currently, SQLite3 is used for live development. Migration to PostgreSQL/JSONB is planned and health checks will be updated accordingly.
+  - See `/server/index.js` for the current health check implementation and TODO note.
 - **AI:**
   - **Default:** Use Google's Gemini for both text and image generation.
   - Leverage best-in-class third-party APIs for core GenAI (image generation, possibly LLM for assistant). Build custom logic for agent orchestration and workflow, not foundational models.

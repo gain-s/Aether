@@ -16,8 +16,16 @@ app.use(cors());
 app.use(rateLimit({ windowMs: 15 * 60 * 1000, max: 100 }));
 
 // Health endpoint
+// Checks SQLite3 connection; TODO: Switch to PostgreSQL after migration
+const db = require("./db");
 app.get("/health", (req, res) => {
-  res.json({ status: "ok" });
+  db.get("SELECT 1", (err) => {
+    if (err) {
+      // Database not healthy
+      return res.status(503).json({ status: "error", db: "unavailable" });
+    }
+    res.status(200).json({ status: "ok", db: "sqlite3" });
+  });
 });
 
 // Default route

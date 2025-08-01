@@ -42,8 +42,10 @@ start_backend() {
     echo -e "${GREEN}Waiting for backend to become ready...${NC}"
     until curl --output /dev/null --silent --head --fail http://localhost:3000; do
         echo "⏳ Waiting for backend at http://localhost:3000..."
-        sleep 1
+        sleep 2
     done
+    echo -e "${GREEN}✅ Backend is listening! Giving it a moment to stabilize...${NC}"
+    sleep 8 # <--- ADD THIS LINE. Adjust the number of seconds if needed.
     echo -e "${GREEN}✅ Backend is ready!${NC}"
 }
 

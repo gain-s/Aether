@@ -4,18 +4,14 @@
   let loading = false;
   let error = '';
 
+  import { submitPrompt as submitPromptApi } from '../lib/api';
+
   async function submitPrompt() {
     aiResult = '';
     error = '';
     loading = true;
     try {
-      const res = await fetch('/prompt', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt })
-      });
-      if (!res.ok) throw new Error(`Error: ${res.status}`);
-      const data = await res.json();
+      const data = await submitPromptApi(prompt);
       aiResult = data.result || JSON.stringify(data);
     } catch (err) {
       error = err.message;

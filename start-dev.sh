@@ -33,8 +33,17 @@ start_frontend() {
 # ─── Health Check Logic
 health_check() {
     local url=$1
-    curl --silent --fail "$url" >/dev/null
-    return $?
+    if curl --silent --fail "$url" >/dev/null; then
+        # If this is the backend URL, add stabilization delay on first success
+        if [ "$url" = "$BACKEND_URL" ] && [ -z "$BACKEND_STABILIZED" ]; then
+            echo -e "${GREEN}Backend is listening! Giving it a moment to stabilize...${NC}"
+            sleep 8  # Same magic number as in start-app.sh
+            export BACKEND_STABILIZED=1
+            echo -e "${GREEN}Backend is ready!${NC}"
+        fi
+        return 0
+    fi
+    return 1
 }
 
 # ─── Watchdog Function
