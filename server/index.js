@@ -76,15 +76,64 @@ app.post("/prompt", async (req, res, next) => {
       .json({ error: "Prompt is required and must be a non-empty string." });
   }
   try {
-    // Use AI service abstraction
-    const aiResponse = await aiService.generateText(prompt);
+    // Use AI service abstraction with new content format
+    const aiResponse = await aiService.generateContent(prompt);
     crud.createPrompt(prompt, (err, dbResult) => {
       if (err) return next(err);
-      res.status(201).json({ ...aiResponse, promptId: dbResult.id });
+      // Store both prompt and generated content
+      crud.createAIResult(dbResult.id, aiResponse.content, (err, aiResult) => {
+        if (err) return next(err);
+        res.status(201).json({
+          ...aiResponse,
+          promptId: dbResult.id,
+          resultId: aiResult.id,
+        });
+      });
     });
   } catch (err) {
     // AI service error handling
     next(err);
+  }
+});
+
+// --- PREVIEW ENDPOINT ---
+const previewTemplate = (content) => `
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    .preview { max-width: 800px; margin: 2rem auto; font-family: system-ui; }
+    .preview h1 { color: #2c3e50; }
+    .preview .content { line-height: 1.6; }
+  </style>
+</head>
+<body>
+  <div class="preview">
+    <h1>${content.title}</h1>
+    <div class="content">${content.body}</div>
+  </div>
+</body>
+</html>
+`;
+
+app.get("/preview", (req, res) => {
+  const { content } = req.query;
+  if (!content) {
+    return res.status(400).json({ error: "Content parameter is required" });
+  }
+  try {
+    const contentObj = JSON.parse(content);
+    if (!contentObj.title || !contentObj.body) {
+      return res.status(400).json({
+        error: "Content must include title and body",
+      });
+    }
+    res.send(previewTemplate(contentObj));
+  } catch (err) {
+    res.status(400).json({
+      error: "Invalid content format",
+      details: err.message,
+    });
   }
 });
 

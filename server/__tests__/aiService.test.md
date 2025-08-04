@@ -4,7 +4,7 @@
 
 **Test Implementation Review Stamp**
 
-> ✅ Verified: As of 2025-07-31, the implementation in `aiService.test.js` properly validates the AI service abstraction layer. The suite covers core functionality, error handling, and response structure validation. All tests pass with proper isolation and cleanup. If this documentation is modified, this verification stamp is invalidated and a new review will be required.
+> ✅ Verified: As of 2025-08-03, the implementation in `aiService.test.js` properly validates the AI service abstraction layer with updated response format. The suite covers core functionality (content generation, preview preparation), error handling, and response structure validation. All tests pass with proper isolation and cleanup. This update aligns with the core loop requirements: Prompt -> AI Processing -> Preview -> Basic Override -> PDF Export. If this documentation is modified, this verification stamp is invalidated and a new review will be required.
 
 ### Test Suite Overview
 
@@ -46,18 +46,36 @@ _Ensures proper system integration_
 
 ```javascript
 class MockAIService extends AIService {
-  async generateText(prompt) {
+  async generateContent(prompt) {
     return {
-      result: `AI (mock) response to: "${prompt}"`,
-      meta: {
-        provider: "mock",
-        timestamp: new Date().toISOString(),
+      content: {
+        title: `Generated from: ${prompt}`,
+        body: `This is a simple response to demonstrate the flow.
+               Later we can integrate real AI here.
+               For now, we're testing the core loop.`,
+        layout: "default",
+      },
+      metadata: {
+        model: "mock-1",
         tokens: prompt.split(/\s+/).length,
       },
     };
   }
 }
 ```
+
+Note: As of 2025-08-03, the following updates have been implemented:
+
+1. Response Format Changes:
+
+   - `generateText` → `generateContent`
+   - Response structure includes content object (title, body, layout)
+   - Metadata simplified to focus on model and token count
+
+2. Storage Implementation:
+   - AI results stored as JSON strings in database
+   - Automatic serialization/deserialization in CRUD layer
+   - Maintains object structure integrity throughout the system
 
 #### Test Dependencies
 
@@ -75,9 +93,9 @@ class MockAIService extends AIService {
 
 2. **Response Validation**
 
-   - Structure verification
-   - Content type checking
-   - Metadata validation
+   - Content object verification (title, body, layout)
+   - Metadata validation (model, tokens)
+   - Database ID validation (promptId, resultId)
 
 3. **State Management**
    - Resource cleanup
