@@ -7,12 +7,12 @@ const puppeteer = require("puppeteer");
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Puppeteer global browser instance
-let browserInstance;
+// Initialize Puppeteer
 let puppeteerReady = false;
 (async () => {
   try {
-    browserInstance = await puppeteer.launch({
+    // Launch Puppeteer with system Chrome in containerized environment
+    await puppeteer.launch({
       executablePath: "/usr/bin/google-chrome",
       args: ["--no-sandbox"],
     });
@@ -20,7 +20,6 @@ let puppeteerReady = false;
     console.log("Puppeteer initialized successfully with system Chrome");
   } catch (err) {
     console.error("Puppeteer failed to launch:", err);
-    // Optionally exit if critical: process.exit(1);
   }
 })();
 
@@ -190,42 +189,37 @@ app.get("/export", async (req, res) => {
     return res.status(400).json({ error: "Content parameter is required" });
   }
 
-  if (!puppeteerReady || !browserInstance) {
+  if (!puppeteerReady) {
     return res.status(503).json({
       error: "PDF generation service not ready",
-      details: "Puppeteer is still initializing or failed to launch",
+      details: "Puppeteer is still initializing",
     });
   }
 
-  let page;
+  let browser;
   try {
-    const contentObj = JSON.parse(decodeURIComponent(content));
+    const contentObj = JSON.parse(content);
     if (!contentObj.title || !contentObj.body) {
       return res.status(400).json({
         error: "Content must include title and body",
       });
     }
 
-    page = await browserInstance.newPage();
-    await page.setContent(previewTemplate(contentObj));
-    const pdf = await page.pdf({
-      format: "A4",
-      printBackground: true,
-      margin: {
-        top: "1cm",
-        right: "1cm",
-        bottom: "1cm",
-        left: "1cm",
-      },
+    browser = await puppeteer.launch({
+      executablePath: "/usr/bin/google-chrome",
+      args: ["--no-sandbox"],
     });
-    res.setHeader("Content-Disposition", "inline; filename=output.pdf");
-    res.setHeader("Content-Type", "application/pdf");
-    res.send(pdf);
+    const page = await browser.newPage();
+    await page.setContent(previewTemplate(contentObj));
+    const pdf = await page.pdf({ format: "A4" });
+    res.type("application/pdf").send(pdf);
   } catch (err) {
-    err.message = `Failed to generate PDF: ${err.message}`;
-    next(err);
+    res.status(400).json({
+      error: "Failed to generate PDF",
+      details: err.message,
+    });
   } finally {
-    if (page) await page.close();
+    if (browser) await browser.close();
   }
 });
 
@@ -404,12 +398,4 @@ app.delete("/api/pdf_exports/:id", (req, res, next) => {
 // Start server
 app.listen(PORT, () => {
   console.log(`Server listening on port ${PORT}`);
-});
-
-// Graceful shutdown for Puppeteer and DB
-process.on("SIGINT", async () => {
-  console.log("Received SIGINT. Closing resources...");
-  if (browserInstance) await browserInstance.close();
-  db.close();
-  process.exit(0);
 });

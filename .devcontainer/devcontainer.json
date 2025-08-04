@@ -24,7 +24,7 @@
 
   "postAttachCommand": {
     //"client + server": "concurrently 'cd ./client && npm run dev' 'cd ./server && npm run dev'"
-    "client + server": "bash ./start-app.sh"
+    //x "client + server": "bash ./start-app.sh"
   },
 
   // --- VS CODE CUSTOMIZATIONS ---

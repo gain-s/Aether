@@ -15,7 +15,39 @@ FROM mcr.microsoft.com/devcontainers/javascript-node:22-bullseye
 #     apt-get update && export DEBIAN_FRONTEND=noninteractive && apt-get -y install zsh; \
 #   fi
 
-RUN apt-get update && apt-get install -y postgresql-client && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y \
+    postgresql-client \
+    # Chrome dependencies for Puppeteer
+    libnspr4 \
+    libnss3 \
+    libexpat1 \
+    libfontconfig1 \
+    libuuid1 \
+    libgbm1 \
+    libxcb1 \
+    libxkbcommon0 \
+    libx11-6 \
+    libx11-xcb1 \
+    libxcb-dri3-0 \
+    libdrm2 \
+    libxshmfence1 \
+    libxcomposite1 \
+    libxcursor1 \
+    libxdamage1 \
+    libxext6 \
+    libxfixes3 \
+    libxi6 \
+    libxrandr2 \
+    libxtst6 \
+    libasound2 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Google Chrome Stable
+RUN curl -fsSL https://dl.google.com/linux/linux_signing_key.pub | gpg --dearmor -o /usr/share/keyrings/google-linux-signing-key.gpg \
+    && echo "deb [arch=amd64 signed-by=/usr/share/keyrings/google-linux-signing-key.gpg] http://dl.google.com/linux/chrome/deb/ stable main" > /etc/apt/sources.list.d/google-chrome.list \
+    && apt-get update \
+    && apt-get install -y google-chrome-stable \
+    && rm -rf /var/lib/apt/lists/*
 
 # 3. [Optional] You can add other setup commands here.
 # For example, installing global npm packages.
