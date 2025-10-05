@@ -1,63 +1,29 @@
+<!-- 
+  Per Core Architecture Principles (README.md):
+  - Components must be "dumb" with clear separation of concerns
+  - No internal fetch/update logic in UI components
+  - All updates must flow through the store
+  - Clear separation from business logic and API calls
+-->
 <script>
   import { createEventDispatcher } from "svelte";
-  import { tick } from "svelte";
 
-  let prompt = "";
-  let loading = false;
-  let errorMsg = "";
+  // State passed down to component, not managed internally
+  export let prompt = "";
+  export let loading = false;
+  export let errorMsg = "";
+
   const dispatch = createEventDispatcher();
 
-  function extractHtmlFromResponse(json) {
-    // Common shapes returned by server: { success:true, data: { content: { body, title } } }
-    // legacy shapes: { content: { body } } or { html }
-    if (!json) return null;
-    if (json.data && json.data.content) {
-      const c = json.data.content;
-      return c.body || c.html || JSON.stringify(c);
-    }
-    if (json.content) {
-      const c = json.content;
-      return c.body || c.html || JSON.stringify(c);
-    }
-    if (json.html) return json.html;
-    if (json.preview) return json.preview;
-    return JSON.stringify(json);
-  }
-
-  async function submitPrompt() {
-    errorMsg = "";
-    if (!prompt || prompt.trim().length === 0) {
-      errorMsg = "Please enter a prompt";
-      return;
-    }
-    loading = true;
-    dispatch("loading", { loading: true });
-    try {
-      // Use the dev query param so the server's deterministic handler will run in dev
-      const res = await fetch("/prompt?dev=true", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt }),
-      });
-      const json = await res.json();
-      const html = extractHtmlFromResponse(json);
-      if (!html) throw new Error("Invalid response from server");
-      dispatch("result", { html });
-    } catch (e) {
-      const msg = e && e.message ? e.message : String(e);
-      errorMsg = msg;
-      dispatch("error", { error: msg });
-    } finally {
-      loading = false;
-      dispatch("loading", { loading: false });
-      await tick();
-    }
+  // Component only emits events, doesn't handle business logic
+  function handleSubmit() {
+    dispatch("submit", { prompt });
   }
 
   function onKeydown(e) {
-    // Ctrl+Enter or Cmd+Enter submits
+    // Simple keyboard shortcut handling only
     if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
-      submitPrompt();
+      handleSubmit();
     }
   }
 </script>
@@ -65,15 +31,20 @@
 <div class="prompt-form">
   <label for="prompt-input">Prompt</label>
   <div style="display:flex;gap:8px;align-items:center">
-    <input
+    <textarea
       id="prompt-input"
       bind:value={prompt}
       placeholder="Enter a poem prompt"
-    />
-    <button on:click={submitPrompt} disabled={loading}>Generate</button>
+      rows="3"
+      on:keydown={onKeydown}
+    ></textarea>
+    <button on:click={handleSubmit} disabled={loading}>Generate</button>
   </div>
   {#if loading}
     <div class="loading">Generating…</div>
+  {/if}
+  {#if errorMsg}
+    <div class="error">{errorMsg}</div>
   {/if}
 </div>
 
@@ -81,9 +52,16 @@
   .prompt-form {
     margin-bottom: 12px;
   }
-  input {
-    padding: 8px;
+  textarea {
+    padding: 12px;
     min-width: 320px;
+    min-height: 100px;
+    resize: vertical;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    background-color: cyan;
+    font-size: 14px;
+    line-height: 1.4;
   }
   button {
     padding: 8px 12px;
@@ -91,5 +69,11 @@
   .loading {
     color: #666;
     font-size: 13px;
+    margin-top: 8px;
+  }
+  .error {
+    color: #d00;
+    font-size: 13px;
+    margin-top: 8px;
   }
 </style>
