@@ -201,9 +201,20 @@ function createAIService() {
     return new RealAIService();
   }
 
-  // Priority 3: Default to mock (backward compatible)
-  console.log("AI service: MockAIService enabled (USE_REAL_AI not set)");
-  return new MockAIService();
+  // Priority 3: Default to real AI (production ready)
+  // Only fall back to mock if Gemini credentials are missing
+  const apiUrl =
+    process.env.GEMINI_API_URL || process.env.GEMINI_API_URL_TEXT;
+  const apiKey =
+    process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY_TEXT;
+  if (!apiUrl || !apiKey) {
+    console.log(
+      "AI service: MockAIService enabled (Gemini credentials not configured)"
+    );
+    return new MockAIService();
+  }
+  console.log("AI service: RealAIService enabled (Gemini - default)");
+  return new RealAIService();
 }
 
 module.exports = { MockAIService, RealAIService, createAIService };
