@@ -68,6 +68,27 @@ try {
 // --- Main Server Initialization Sequence ---
 async function startServer(options = {}) {
   try {
+    // 0. Validate required environment variables
+    const useRealAI =
+      process.env.USE_REAL_AI === "1" || process.env.USE_REAL_AI === "true";
+    if (useRealAI) {
+      if (!process.env.GEMINI_API_KEY) {
+        console.error("❌ GEMINI_API_KEY is required when USE_REAL_AI=1");
+        console.error("   Set with: export GEMINI_API_KEY='your-api-key-here'");
+        process.exit(1);
+      }
+      if (!process.env.GEMINI_API_URL) {
+        console.error("❌ GEMINI_API_URL is required when USE_REAL_AI=1");
+        console.error(
+          "   Set with: export GEMINI_API_URL='https://generativelanguage.googleapis.com/v1beta/models/...'"
+        );
+        process.exit(1);
+      }
+      console.log(
+        "✓ Environment validation passed (USE_REAL_AI=1 with GEMINI_API_KEY and GEMINI_API_URL)"
+      );
+    }
+
     // 1. Initialize database first
     await db.initialize();
     serviceState.db.ready = true;
