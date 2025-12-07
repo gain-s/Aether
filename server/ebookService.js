@@ -99,6 +99,9 @@ async function handle(payload, classification) {
           },
         };
       },
+      async generateContentWithRotation(p) {
+        return this.generateContent(p);
+      },
     };
   }
 

@@ -25,6 +25,11 @@ class MockAIService {
       metadata,
     };
   }
+
+  // Support batch optimization in tests by delegating to generateContent
+  async generateContentWithRotation(prompt, callIndex = 0) {
+    return this.generateContent(prompt);
+  }
 }
 
 // Real AI service - thin wrapper around geminiClient.callGemini
