@@ -7,7 +7,24 @@
  * Routes through Phase B pipeline:
  * prompt → sampleService.generate() → contentChunker → themeEngine →
  * pageLayout → tocGenerator → HTML generation
+ *
+ * Phase 4: Unified batch optimization integration
+ * - Detects 3-20 page ebooks eligible for batch processing
+ * - Routes to BatchOptimizationService for optimized generation (30-50% fewer API calls)
+ * - Falls back to sequential generation if batch not applicable
  */
+
+// Import batch optimization adapter (Phase 4 integration)
+let tryBatchOptimization = null;
+try {
+  const {
+    tryBatchOptimization: batchAdapter,
+  } = require("./batchOptimization/ebookServiceAdapter");
+  tryBatchOptimization = batchAdapter;
+} catch (err) {
+  console.warn("[EBOOK] Batch optimization not available:", err.message);
+  tryBatchOptimization = null;
+}
 
 function buildContent(prompt) {
   const title = `Ebook: ${String(prompt || "")
@@ -188,162 +205,228 @@ async function handle(payload, classification) {
       );
     }
 
-    // Conversation 2+: Sequential per-chapter generation
-    const chapters = [];
-    console.log(
-      "[EBOOK] Starting chapter generation loop, outline length:",
-      structure.outline.length
-    );
-    for (let i = 0; i < structure.outline.length; i++) {
-      const ch = structure.outline[i];
-      const prevSummary = i > 0 ? chapters[i - 1].summary || "" : "";
-
-      console.log(
-        `[EBOOK] Chapter ${i + 1}/${
-          structure.outline.length
-        }: Starting generation for "${ch.title}"`
-      );
-
-      const contentPrompt = `You are writing Chapter ${ch.chapter}: \"${
-        ch.title
-      }\"\n\nContext: Total eBook: ${pageCount} pages. This chapter ${
-        ch.chapter
-      } of ${structure.outline.length}. Key topics: ${(
-        ch.estimated_topics || []
-      ).join(
-        ", "
-      )}. Previous summary: ${prevSummary}\n\nReturn JSON: { chapter: number, title: string, content: string, summary: string, image: { concept: string, suggested_style: string, tone: string } }`;
-
-      let chapterResp = null;
+    // Phase 4: Attempt batch optimization for eligible ebooks (3-20 chapters)
+    // This reduces API calls by 30-50% compared to sequential generation
+    let chapters = [];
+    if (tryBatchOptimization && structure && Array.isArray(structure.outline)) {
       try {
         console.log(
-          `[EBOOK] Chapter ${i + 1}/${
-            structure.outline.length
-          }: Calling aiSvc.generateContentWithRotation() with callIndex=${
-            i + 1
-          }`
+          "[EBOOK] Attempting batch optimization for",
+          structure.outline.length,
+          "chapters"
         );
-        const chapterStartTime = Date.now();
-        // Use call index (i+1) for chapters, enabling quota rotation to Gemini 2.5 Flash
-        chapterResp = aiSvc.generateContentWithRotation
-          ? await aiSvc.generateContentWithRotation(contentPrompt, i + 1)
-          : await aiSvc.generateContent(contentPrompt);
-        const chapterEndTime = Date.now();
+        const batchedChapters = await tryBatchOptimization(
+          aiSvc,
+          {
+            title: structure.title,
+            prompt: String(prompt),
+            pageCount,
+            theme,
+          },
+          structure
+        );
+
+        if (
+          batchedChapters &&
+          Array.isArray(batchedChapters) &&
+          batchedChapters.length > 0
+        ) {
+          console.log(
+            "[EBOOK] ✓ Batch optimization successful! Generated",
+            batchedChapters.length,
+            "chapters with optimized API calls"
+          );
+          chapters = batchedChapters;
+        } else {
+          console.log(
+            "[EBOOK] Batch optimization returned no chapters, falling back to sequential generation"
+          );
+          chapters = [];
+        }
+      } catch (batchErr) {
+        console.warn(
+          "[EBOOK] Batch optimization failed, falling back to sequential:",
+          batchErr.message
+        );
+        chapters = [];
+      }
+    } else {
+      console.log(
+        "[EBOOK] Batch optimization not available (module not loaded or structure invalid)"
+      );
+    }
+
+    // Fallback: Sequential per-chapter generation if batch not used
+    if (!chapters || chapters.length === 0) {
+      console.log(
+        "[EBOOK] Using fallback sequential generation for",
+        structure.outline.length,
+        "chapters"
+      );
+      // Conversation 2+: Sequential per-chapter generation
+      chapters = [];
+      console.log(
+        "[EBOOK] Starting chapter generation loop, outline length:",
+        structure.outline.length
+      );
+      for (let i = 0; i < structure.outline.length; i++) {
+        const ch = structure.outline[i];
+        const prevSummary = i > 0 ? chapters[i - 1].summary || "" : "";
+
         console.log(
           `[EBOOK] Chapter ${i + 1}/${
             structure.outline.length
-          }: AI response received in ${chapterEndTime - chapterStartTime}ms`
+          }: Starting generation for "${ch.title}"`
         );
-      } catch (err) {
-        // Non-fatal: fall back to simple generated content
-        console.error(
-          `[EBOOK] Chapter ${i + 1}/${
-            structure.outline.length
-          }: AI generation failed, using fallback`
-        );
-        console.error(`[EBOOK] Error: ${err?.message}`);
-        chapterResp = {
-          content: {
-            title: ch.title,
-            body: `Content for ${ch.title}\n\n${String(prompt).slice(0, 200)}`,
-          },
-        };
-      }
 
-      const chapterText =
-        (chapterResp &&
-          (chapterResp.content?.body ||
-            chapterResp.content?.title ||
-            chapterResp.rawText)) ||
-        "";
-      let chapterData = tryParse(chapterText);
+        const contentPrompt = `You are writing Chapter ${ch.chapter}: \"${
+          ch.title
+        }\"\n\nContext: Total eBook: ${pageCount} pages. This chapter ${
+          ch.chapter
+        } of ${structure.outline.length}. Key topics: ${(
+          ch.estimated_topics || []
+        ).join(
+          ", "
+        )}. Previous summary: ${prevSummary}\n\nReturn JSON: { chapter: number, title: string, content: string, summary: string, image: { concept: string, suggested_style: string, tone: string } }`;
 
-      if (!chapterData) {
-        // heuristics to build chapterData
-        const body =
-          chapterText && chapterText.length > 0
-            ? chapterText
-            : `Placeholder content for ${ch.title}.`;
-
-        // Try to extract image fields from plain text (e.g. JSON-like snippets)
-        let extractedConcept = null;
-        let extractedStyle = null;
-        let extractedTone = null;
+        let chapterResp = null;
         try {
-          const mConcept = String(chapterText).match(
-            /"concept"\s*:\s*"([^"]+)"/i
+          console.log(
+            `[EBOOK] Chapter ${i + 1}/${
+              structure.outline.length
+            }: Calling aiSvc.generateContentWithRotation() with callIndex=${
+              i + 1
+            }`
           );
-          if (mConcept) extractedConcept = mConcept[1];
-          const mStyle = String(chapterText).match(
-            /"suggested_style"\s*:\s*"([^"]+)"/i
+          const chapterStartTime = Date.now();
+          // Use call index (i+1) for chapters, enabling quota rotation to Gemini 2.5 Flash
+          chapterResp = aiSvc.generateContentWithRotation
+            ? await aiSvc.generateContentWithRotation(contentPrompt, i + 1)
+            : await aiSvc.generateContent(contentPrompt);
+          const chapterEndTime = Date.now();
+          console.log(
+            `[EBOOK] Chapter ${i + 1}/${
+              structure.outline.length
+            }: AI response received in ${chapterEndTime - chapterStartTime}ms`
           );
-          if (mStyle) extractedStyle = mStyle[1];
-          const mTone = String(chapterText).match(/"tone"\s*:\s*"([^"]+)"/i);
-          if (mTone) extractedTone = mTone[1];
-        } catch (e) {
-          // ignore extraction errors
+        } catch (err) {
+          // Non-fatal: fall back to simple generated content
+          console.error(
+            `[EBOOK] Chapter ${i + 1}/${
+              structure.outline.length
+            }: AI generation failed, using fallback`
+          );
+          console.error(`[EBOOK] Error: ${err?.message}`);
+          chapterResp = {
+            content: {
+              title: ch.title,
+              body: `Content for ${ch.title}\n\n${String(prompt).slice(
+                0,
+                200
+              )}`,
+            },
+          };
         }
 
-        // If the active AI service is the built-in MockAIService used in tests,
-        // prefer a deterministic concept so unit tests can assert reliably.
-        // Also treat plain test objects (without constructor name) as mocks for testing.
-        const isBuiltinMock = !!(
-          (
-            aiSvc &&
-            (aiSvc.constructor?.name === "MockAIService" ||
-              !aiSvc.constructor || // Plain test objects have no constructor
-              aiSvc.constructor.name === "Object")
-          ) // Or they're plain objects
-        );
+        const chapterText =
+          (chapterResp &&
+            (chapterResp.content?.body ||
+              chapterResp.content?.title ||
+              chapterResp.rawText)) ||
+          "";
+        let chapterData = tryParse(chapterText);
 
-        chapterData = {
-          chapter: ch.chapter || i + 1,
-          title: ch.title || `Chapter ${i + 1}`,
-          content: body,
-          summary: (body || "").split("\n").slice(0, 1).join(" ").slice(0, 200),
+        if (!chapterData) {
+          // heuristics to build chapterData
+          const body =
+            chapterText && chapterText.length > 0
+              ? chapterText
+              : `Placeholder content for ${ch.title}.`;
+
+          // Try to extract image fields from plain text (e.g. JSON-like snippets)
+          let extractedConcept = null;
+          let extractedStyle = null;
+          let extractedTone = null;
+          try {
+            const mConcept = String(chapterText).match(
+              /"concept"\s*:\s*"([^"]+)"/i
+            );
+            if (mConcept) extractedConcept = mConcept[1];
+            const mStyle = String(chapterText).match(
+              /"suggested_style"\s*:\s*"([^"]+)"/i
+            );
+            if (mStyle) extractedStyle = mStyle[1];
+            const mTone = String(chapterText).match(/"tone"\s*:\s*"([^"]+)"/i);
+            if (mTone) extractedTone = mTone[1];
+          } catch (e) {
+            // ignore extraction errors
+          }
+
+          // If the active AI service is the built-in MockAIService used in tests,
+          // prefer a deterministic concept so unit tests can assert reliably.
+          // Also treat plain test objects (without constructor name) as mocks for testing.
+          const isBuiltinMock = !!(
+            (
+              aiSvc &&
+              (aiSvc.constructor?.name === "MockAIService" ||
+                !aiSvc.constructor || // Plain test objects have no constructor
+                aiSvc.constructor.name === "Object")
+            ) // Or they're plain objects
+          );
+
+          chapterData = {
+            chapter: ch.chapter || i + 1,
+            title: ch.title || `Chapter ${i + 1}`,
+            content: body,
+            summary: (body || "")
+              .split("\n")
+              .slice(0, 1)
+              .join(" ")
+              .slice(0, 200),
+            image: {
+              concept:
+                extractedConcept ||
+                (isBuiltinMock
+                  ? `Concept ${ch.chapter || i + 1}`
+                  : `Illustration for ${ch.title}`),
+              suggested_style: extractedStyle || null,
+              tone: extractedTone || "neutral",
+            },
+          };
+        }
+
+        // Determine image style (theme default + optional AI suggestion)
+        const themeDefaults = {
+          dark: "gothic",
+          light: "bright",
+          corporate: "professional",
+          bold: "vibrant",
+        };
+        const aiSuggested =
+          chapterData.image && chapterData.image.suggested_style;
+        const style =
+          aiSuggested && typeof aiSuggested === "string"
+            ? aiSuggested
+            : themeDefaults[theme] || "gothic";
+
+        chapters.push({
+          id: `ch_${i + 1}`,
+          chapter: chapterData.chapter || i + 1,
+          title: chapterData.title || ch.title || `Chapter ${i + 1}`,
+          content: chapterData.content || "",
+          summary: chapterData.summary || "",
           image: {
             concept:
-              extractedConcept ||
-              (isBuiltinMock
-                ? `Concept ${ch.chapter || i + 1}`
-                : `Illustration for ${ch.title}`),
-            suggested_style: extractedStyle || null,
-            tone: extractedTone || "neutral",
+              (chapterData.image && chapterData.image.concept) ||
+              `A scene representing ${ch.title}`,
+            style,
+            tone: (chapterData.image && chapterData.image.tone) || "neutral",
+            palette_hint: colorPalette,
+            size_hint: "full-width",
           },
-        };
+        });
       }
-
-      // Determine image style (theme default + optional AI suggestion)
-      const themeDefaults = {
-        dark: "gothic",
-        light: "bright",
-        corporate: "professional",
-        bold: "vibrant",
-      };
-      const aiSuggested =
-        chapterData.image && chapterData.image.suggested_style;
-      const style =
-        aiSuggested && typeof aiSuggested === "string"
-          ? aiSuggested
-          : themeDefaults[theme] || "gothic";
-
-      chapters.push({
-        id: `ch_${i + 1}`,
-        chapter: chapterData.chapter || i + 1,
-        title: chapterData.title || ch.title || `Chapter ${i + 1}`,
-        content: chapterData.content || "",
-        summary: chapterData.summary || "",
-        image: {
-          concept:
-            (chapterData.image && chapterData.image.concept) ||
-            `A scene representing ${ch.title}`,
-          style,
-          tone: (chapterData.image && chapterData.image.tone) || "neutral",
-          palette_hint: colorPalette,
-          size_hint: "full-width",
-        },
-      });
-    }
+    } // Close fallback sequential generation block
 
     const density =
       pageCount <= 5
@@ -355,7 +438,7 @@ async function handle(payload, classification) {
         : "very-dense";
 
     // Build pages array for compatibility with composer (simple mapping)
-    const pages = chapters.map((c, idx) => ({
+    const pages = chapters.map((c) => ({
       id: c.id,
       title: c.title,
       content: c.content,
