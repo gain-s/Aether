@@ -5,6 +5,8 @@
 **Audience**: Decision makers, architects, product leads  
 **Status**: Proposed (Ready for Implementation Phase)
 
+**RE**: See `BATCH-OPTIMIZATION_UNIFICATION_STRATEGY.md` for context on batch optimization phases
+
 ---
 
 ## Executive Summary

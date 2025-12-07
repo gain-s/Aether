@@ -1,5 +1,6 @@
 const fs = require("fs");
 const path = require("path");
+const Logger = require("./utils/Logger");
 
 /**
  * Gemini API Quota Tracker
@@ -49,11 +50,11 @@ class QuotaTracker {
 
     const percentUsed = (this.callCount / this.limit) * 100;
     if (percentUsed >= 75) {
-      console.warn(
-        `[QuotaTracker] WARNING: ${this.callCount}/${
-          this.limit
-        } calls used (${Math.round(percentUsed)}%)`
-      );
+      Logger.warn("QuotaTracker", "Approaching quota limit", {
+        callCount: this.callCount,
+        limit: this.limit,
+        percentUsed: Math.round(percentUsed),
+      });
     }
 
     return {
@@ -81,30 +82,36 @@ class QuotaTracker {
       secondsUntilReset: Math.max(0, secondsUntilReset),
       dailyCallCount: this.dailyCallCount,
       lastError: this.lastError,
-      message: this.getMessage(),
     };
   }
 
   getMessage() {
-    const status = this.getStatus();
-    if (status.isPaused) {
-      return `Quota cooldown active. Resume in ${status.secondsUntilReset}s.`;
+    const percentUsed = Math.round((this.callCount / this.limit) * 100);
+    const isPaused = this.isPaused();
+    const secondsUntilReset = isPaused
+      ? Math.ceil((this.pauseUntil - Date.now()) / 1000)
+      : 0;
+    const remaining = Math.max(0, this.limit - this.callCount);
+
+    if (isPaused) {
+      return `Quota cooldown active. Resume in ${secondsUntilReset}s.`;
     }
-    if (status.percentUsed >= 90) {
-      return `Quota at ${status.percentUsed}%. ${status.remaining} calls remaining.`;
+    if (percentUsed >= 90) {
+      return `Quota at ${percentUsed}%. ${remaining} calls remaining.`;
     }
-    if (status.percentUsed >= 75) {
-      return `Quota approaching. ${status.remaining} calls left.`;
+    if (percentUsed >= 75) {
+      return `Quota approaching. ${remaining} calls left.`;
     }
-    return `Quota normal. ${status.remaining}/${status.limit} calls available.`;
+    return `Quota normal. ${remaining}/${this.limit} calls available.`;
   }
 
   rotateWindow() {
     const now = Date.now();
     if (now - this.windowStart > this.windowMs) {
-      console.log(
-        `[QuotaTracker] Window rotated. Calls in previous window: ${this.callCount}/${this.limit}`
-      );
+      Logger.info("QuotaTracker", "Window rotated", {
+        callsInPreviousWindow: this.callCount,
+        limit: this.limit,
+      });
       this.windowStart = now;
       this.callCount = 0;
       this.pauseUntil = null;
@@ -119,11 +126,12 @@ class QuotaTracker {
   pause() {
     const pauseDuration = 65000;
     this.pauseUntil = Date.now() + pauseDuration;
-    console.error(
-      `[QuotaTracker] QUOTA EXHAUSTED. Pausing ${
-        pauseDuration / 1000
-      }s until ${new Date(this.pauseUntil).toISOString()}`
-    );
+    Logger.error("QuotaTracker", "Quota exhausted - pausing", {
+      pauseDurationMs: pauseDuration,
+      pauseUntilISO: new Date(this.pauseUntil).toISOString(),
+      callCount: this.callCount,
+      limit: this.limit,
+    });
   }
 
   handleQuotaError(error) {
@@ -132,11 +140,11 @@ class QuotaTracker {
     if (retryAfter) {
       const pauseDuration = (retryAfter + 5) * 1000;
       this.pauseUntil = Date.now() + pauseDuration;
-      console.warn(
-        `[QuotaTracker] Quota error. Pause until ${new Date(
-          this.pauseUntil
-        ).toISOString()}`
-      );
+      Logger.warn("QuotaTracker", "Quota error from API", {
+        errorMessage: this.lastError,
+        pauseDurationMs: pauseDuration,
+        pauseUntilISO: new Date(this.pauseUntil).toISOString(),
+      });
     } else {
       this.pause();
     }
@@ -149,7 +157,10 @@ class QuotaTracker {
   }
 
   reset() {
-    console.log("[QuotaTracker] Resetting quota tracker");
+    Logger.info("QuotaTracker", "Resetting quota tracker", {
+      callCount: this.callCount,
+      windowStart: this.windowStart,
+    });
     this.callCount = 0;
     this.windowStart = Date.now();
     this.pauseUntil = null;
@@ -159,7 +170,7 @@ class QuotaTracker {
 
 // Export singleton instance
 const quotaTracker = new QuotaTracker();
-console.log("[QuotaTracker] Initialized (20 calls/min)");
+Logger.info("QuotaTracker", "Initialized", { limit: 20, windowMs: 60000 });
 
 // Small wrapper to call Google's Generative Language endpoints for TEXT or IMAGE modalities.
 // Selects URL/key based on modality and returns parsed response. Does not throw on API errors —

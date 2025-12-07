@@ -11,6 +11,7 @@
 
 const { v4: uuidv4 } = require("uuid");
 const { quotaTracker } = require("./geminiClient");
+const Logger = require("./utils/Logger");
 
 class JobQueueManager {
   constructor() {
@@ -60,7 +61,13 @@ class JobQueueManager {
         `Your request will start in ~${quotaStatus.secondsUntilReset}s.`;
 
       this.deferredQueue.push(jobId);
-      console.log(`[JobQueue] Job ${jobId} deferred: ${deferralMessage}`);
+      Logger.info("JobQueue", "Job deferred due to quota", {
+        jobId,
+        quotaPercentUsed: quotaStatus.percentUsed,
+        quotaCallCount: quotaStatus.callCount,
+        quotaLimit: quotaStatus.limit,
+        deferralMessage,
+      });
     }
 
     const job = {
@@ -81,7 +88,11 @@ class JobQueueManager {
     };
 
     this.jobs.set(jobId, job);
-    console.log(`[JobQueue] Created job ${jobId}, status: ${status}`);
+    Logger.info("JobQueue", "Job created", {
+      jobId,
+      status,
+      pageCount: params.pageCount,
+    });
 
     return {
       jobId,
@@ -180,13 +191,19 @@ class JobQueueManager {
     const job = this.jobs.get(jobId);
 
     if (!job) {
-      console.warn(`[JobQueue] Attempted to update non-existent job ${jobId}`);
+      Logger.warn("JobQueue", "Attempted to update non-existent job", {
+        jobId,
+      });
       return;
     }
 
     job.progress = Math.min(100, Math.max(0, progress));
     job.message = message;
-    console.log(`[JobQueue] ${jobId} progress: ${job.progress}% - ${message}`);
+    Logger.info("JobQueue", "Job progress updated", {
+      jobId,
+      progress: job.progress,
+      message,
+    });
   }
 
   /**
@@ -198,9 +215,9 @@ class JobQueueManager {
     const job = this.jobs.get(jobId);
 
     if (!job) {
-      console.warn(
-        `[JobQueue] Attempted to complete non-existent job ${jobId}`
-      );
+      Logger.warn("JobQueue", "Attempted to complete non-existent job", {
+        jobId,
+      });
       return;
     }
 
@@ -209,9 +226,8 @@ class JobQueueManager {
     job.result = result;
     job.completedAt = Date.now();
     job.message = "Complete";
-    console.log(
-      `[JobQueue] ${jobId} completed in ${Date.now() - job.startTime}ms`
-    );
+    const duration = Date.now() - job.startTime;
+    Logger.info("JobQueue", "Job completed", { jobId, durationMs: duration });
   }
 
   /**
@@ -223,7 +239,7 @@ class JobQueueManager {
     const job = this.jobs.get(jobId);
 
     if (!job) {
-      console.warn(`[JobQueue] Attempted to fail non-existent job ${jobId}`);
+      Logger.warn("JobQueue", "Attempted to fail non-existent job", { jobId });
       return;
     }
 
@@ -231,7 +247,7 @@ class JobQueueManager {
     job.error = error;
     job.completedAt = Date.now();
     job.message = `Error: ${error}`;
-    console.log(`[JobQueue] ${jobId} failed: ${error}`);
+    Logger.error("JobQueue", "Job failed", { jobId, error });
   }
 
   /**
@@ -242,9 +258,10 @@ class JobQueueManager {
       this.cleanupOldJobs();
     }, this.cleanupInterval);
 
-    console.log(
-      `[JobQueue] Started cleanup scheduler (interval: ${this.cleanupInterval}ms, max age: ${this.maxJobAge}ms)`
-    );
+    Logger.info("JobQueue", "Cleanup scheduler started", {
+      intervalMs: this.cleanupInterval,
+      maxAgeMs: this.maxJobAge,
+    });
   }
 
   /**
@@ -272,7 +289,7 @@ class JobQueueManager {
   stop() {
     if (this.cleanupTimer) {
       clearInterval(this.cleanupTimer);
-      console.log(`[JobQueue] Stopped cleanup scheduler`);
+      Logger.info("JobQueue", "Cleanup scheduler stopped");
     }
   }
 
@@ -303,9 +320,9 @@ class JobQueueManager {
       this.processDeferredQueue();
     }, this.deferralCheckInterval);
 
-    console.log(
-      `[JobQueue] Started deferral processor (check every ${this.deferralCheckInterval}ms)`
-    );
+    Logger.info("JobQueue", "Deferral processor started", {
+      checkIntervalMs: this.deferralCheckInterval,
+    });
   }
 
   /**
@@ -332,7 +349,10 @@ class JobQueueManager {
         job.deferredUntil = null;
         job.message =
           "Starting ebook generation (resumed from quota cooldown)...";
-        console.log(`[JobQueue] Job ${jobId} resumed from deferral`);
+        Logger.info("JobQueue", "Job resumed from deferral", {
+          jobId,
+          quotaPercentUsed: quotaStatus.percentUsed,
+        });
       }
     }
 
@@ -345,10 +365,10 @@ class JobQueueManager {
     }
 
     if (toResume.length > 0) {
-      console.log(
-        `[JobQueue] Resumed ${toResume.length} deferred jobs. ` +
-          `${this.deferredQueue.length} jobs still deferred.`
-      );
+      Logger.info("JobQueue", "Deferred jobs resumed", {
+        resumedCount: toResume.length,
+        stillDeferredCount: this.deferredQueue.length,
+      });
     }
   }
 
@@ -358,7 +378,7 @@ class JobQueueManager {
   stopDeferralProcessor() {
     if (this.deferralTimer) {
       clearInterval(this.deferralTimer);
-      console.log("[JobQueue] Stopped deferral processor");
+      Logger.info("JobQueue", "Deferral processor stopped");
     }
   }
 }

@@ -5,6 +5,8 @@
 **Status**: Phase 1b COMPLETE / Phase 2-5 PENDING (Blocked on remediation items)  
 **Audience**: Architects, Technical Leadership
 
+**RE**: See `BATCH-OPT_RECONFIG.md` for strategic context on batch optimization design
+
 ---
 
 ## Executive Summary

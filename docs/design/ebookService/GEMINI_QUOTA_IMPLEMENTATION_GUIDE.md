@@ -5,6 +5,8 @@
 **Audience**: Developers, DevOps, QA engineers  
 **Status**: Implementation Complete (Active Error - See Note Below)
 
+**RE**: See `GEMINI_QUOTA_MANAGEMENT_STRATEGY.md` for strategy details
+
 ### ⚠️ CURRENT ERROR
 
 **Issue**: Infinite recursion in `getMessage()` / `getStatus()` in `server/geminiClient.js`  
